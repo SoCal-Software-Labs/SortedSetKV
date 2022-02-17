@@ -619,6 +619,33 @@ fn rpush<'a>(
 }
 
 #[rustler::nif]
+fn lpush<'a>(
+    db_resouce: rustler::Term<'a>,
+    collection: rustler::Binary,
+    value: rustler::Binary,
+) -> NifResult<rustler::Atom> {
+    let dbr: rustler::ResourceArc<DbResource> = db_resouce.decode()?;
+    let db = &dbr.db;
+    let list_tree_bytes = LIST_PREFIX
+        .to_vec()
+        .into_iter()
+        .chain(collection.as_slice().iter().copied())
+        .collect::<Vec<_>>();
+
+    let list_tree: sled::Tree = db.open_tree(IVec::from(list_tree_bytes)).unwrap();
+    let right_side_id = db.generate_id().map_err(sled_err_into)?;
+    let key = -1 * ((right_side_id as i128 - i64::MAX as i128) as i64);
+
+    let list_key = key.to_be_bytes().to_vec();
+
+    list_tree
+        .insert(list_key, value.as_slice())
+        .map_err(sled_err_into)?;
+
+    Ok(atoms::ok())
+}
+
+#[rustler::nif]
 fn lpop<'a>(
     env: rustler::Env<'a>,
     db_resouce: rustler::Term<'a>,
@@ -635,6 +662,32 @@ fn lpop<'a>(
     let list_tree: sled::Tree = db.open_tree(IVec::from(list_tree_bytes)).unwrap();
 
     let maybe_left = list_tree.pop_min().map_err(sled_err_into)?;
+    match maybe_left {
+        Some(elem) => {
+            list_tree.remove(&elem.0).map_err(sled_err_into)?;
+            Ok(Some(make_binary(env, &elem.1)))
+        }
+        _ => Ok(None),
+    }
+}
+
+#[rustler::nif]
+fn rpop<'a>(
+    env: rustler::Env<'a>,
+    db_resouce: rustler::Term<'a>,
+    collection: rustler::Binary,
+) -> NifResult<Option<rustler::Binary<'a>>> {
+    let dbr: rustler::ResourceArc<DbResource> = db_resouce.decode()?;
+    let db = &dbr.db;
+    let list_tree_bytes = LIST_PREFIX
+        .to_vec()
+        .into_iter()
+        .chain(collection.as_slice().iter().copied())
+        .collect::<Vec<_>>();
+
+    let list_tree: sled::Tree = db.open_tree(IVec::from(list_tree_bytes)).unwrap();
+
+    let maybe_left = list_tree.pop_max().map_err(sled_err_into)?;
     match maybe_left {
         Some(elem) => {
             list_tree.remove(&elem.0).map_err(sled_err_into)?;
@@ -678,7 +731,9 @@ rustler::init!(
         zscore,
         zscoreupdate,
         zrembyrangebyscore,
+        lpush,
         rpush,
+        rpop,
         lpop
     ],
     load = load

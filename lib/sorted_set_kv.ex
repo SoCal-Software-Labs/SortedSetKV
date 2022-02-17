@@ -24,6 +24,8 @@ defmodule SortedSetKV do
 
   def zgetbykey(_db, _collection, _key, _min_score), do: :erlang.nif_error(:nif_not_loaded)
   def zrem(_db, _collection, _key), do: :erlang.nif_error(:nif_not_loaded)
+  def lpush(_db, _collection, _value), do: :erlang.nif_error(:nif_not_loaded)
   def rpush(_db, _collection, _value), do: :erlang.nif_error(:nif_not_loaded)
   def lpop(_db, _collection), do: :erlang.nif_error(:nif_not_loaded)
+  def rpop(_db, _collection), do: :erlang.nif_error(:nif_not_loaded)
 end

@@ -55,7 +55,8 @@ true = SortedSetKV.zexists(db, "mycollection", 0, 500)
 ```
 
 ## Iterating keys with scores
-```
+
+```elixir
 offset = 0
 limit = 100
 ["hello"] = SortedSetKV.zrangebyscore(db, "mycollection", 0, 50, offset, limit)
@@ -76,10 +77,15 @@ _ = SortedSetKV.zrembyrangebyscore(db, "mycollection", 0, 500, limit)
 
 ## Queue
 
-```
+```elixir
 :ok = SortedSetKV.rpush(db, "mylist", "value")
 "value" = SortedSetKV.lpop(db, "mylist")
 nil = SortedSetKV.lpop(db, "mylist")
+:ok = SortedSetKV.rpush(db, "mylist", "1")
+:ok = SortedSetKV.rpush(db, "mylist", "2")
+:ok = SortedSetKV.lpush(db, "mylist", "0")
+"0" = SortedSetKV.lpop(db, "mylist")
+"2" = SortedSetKV.rpop(db, "mylist")
 ```
 
 ## TTL
@@ -132,10 +138,10 @@ defmodule TTLCleanup do
         SortedSetKV.zrembyrangebyscore(conn, collection, 0, :os.system_time(:millisecond), 100)
 
       case new_agg do
-        0 ->
+        v when is_number(v) and v <= 99 ->
           :ok
 
-        v when is_number(v) and v >= 99 ->
+        v when is_number(v) ->
           scan(conn, collection)
       end
     end
