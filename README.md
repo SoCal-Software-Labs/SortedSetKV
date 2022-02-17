@@ -16,6 +16,19 @@ SortedSetKV is stored on disk and can grow beyond your RAM limit. There is no Ge
 
 This is alpha software and the API can change in the future.
 
+## Installation
+
+`CubDB` can be installed by adding `:sorted_set_kv` to your list of dependencies in
+`mix.exs`:
+
+```elixir
+def deps do
+  [
+    {:sorted_set_kv, "~> 0.1.0"}
+  ]
+end
+```
+
 ## Basic Usage
 ```elixir
 {:ok, db} = SortedSetKV.open("mypath")
@@ -159,18 +172,5 @@ defmodule TTLCleanup do
           scan(conn, collection)
       end
     end
-end
-```
-
-## Installation
-
-`CubDB` can be installed by adding `:cubdb` to your list of dependencies in
-`mix.exs`:
-
-```elixir
-def deps do
-  [
-    {:sorted_set_kv, "~> 0.1.0"}
-  ]
 end
 ```
