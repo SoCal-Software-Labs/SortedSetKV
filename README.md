@@ -1,12 +1,16 @@
+[![Hex Docs](https://img.shields.io/badge/hex-docs-blue.svg)](https://hexdocs.pm/sorted_set_kv/)
+
 # SortedSetKv
 
-A scored sorted set KV. Inspired by Redis's sorted sets, but quite different. Written for Elixir backed by Rust's sled database.
+An ultrafast double-ended queue, scored sorted set, and embedded key value database. Inspired by Redis's sorted sets, but quite different. Written for Elixir and backed by Rust's sled database.
 
-This is the basis of building a KV with a TTL, however I left it abstracted to be used like redis `zadd` with an optional value field and score field. This means you can use it like a set, use it like a KV, use it like a scored set, use it like a scored KV, or use it as a KV TTL. It is very versitile. And very fast. Because everything is local you can get 1-4 times faster speeds than using Redis.
+Think of it as a Key Value database with an optional secondary u64 index. Perfect for a TTL or timeseries.
+
+This is the basis of building a KV with a TTL, however I left it abstracted to be used like redis `zadd` with an optional value field and score field. This means you can use it like a set, use it like a KV, use it like a scored set, use it like a scored KV, or use it as a KV TTL. It is very versitile. And very fast. Everything is local, so you can get 1-4 times faster speeds than using Redis.
 
 Also because you control the TLL, it won't auto evict things. This is very different from Redis which will start evicting keys regardless if their TTL has passed when it runs out of memory.
 
-SortedSetKV is stored on disk and can grow beyond your RAM limit.
+SortedSetKV is stored on disk and can grow beyond your RAM limit. There is no GenServer abstraction and calls are made directly to Rust.
 
 ## Disclaimer
 
@@ -15,12 +19,13 @@ This is alpha software and the API can change in the future.
 ## Basic Usage
 ```elixir
 {:ok, db} = SortedSetKV.open("mypath")
-# Add a key to a set, with a value and a score and if to only add if if the score is greater than
+# Add a key to a set, with a value and a score.
+# The last parameter tells to only add if the old score is less than new score.
 :ok = SortedSetKV.zadd(db, "mycollection", "hello", "world", 42, true)
 :ok = SortedSetKV.zadd(db, "mycollection", "foo", "bar", 420, true)
 :ok = SortedSetKV.zadd(db, "mycollection", "noscore", "", nil, true)
 :ok = SortedSetKV.zadd(db, "mycollection", "novalue", nil, 100, true)
-# Returns wether it exists and its score
+# Returns whether it exists and its score
 {true, 42} = SortedSetKV.zscore(db, "mycollection", "hello")
 {true, 420} = SortedSetKV.zscore(db, "mycollection", "foo")
 {true, nil} = SortedSetKV.zscore(db, "mycollection", "noscore")
@@ -154,5 +159,18 @@ defmodule TTLCleanup do
           scan(conn, collection)
       end
     end
+end
+```
+
+## Installation
+
+`CubDB` can be installed by adding `:cubdb` to your list of dependencies in
+`mix.exs`:
+
+```elixir
+def deps do
+  [
+    {:sorted_set_kv, "~> 0.1.0"}
+  ]
 end
 ```

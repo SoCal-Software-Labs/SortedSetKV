@@ -1,13 +1,31 @@
 defmodule SortedSetKv.MixProject do
   use Mix.Project
-
+  @version "0.1.0"
   def project do
     [
       app: :sorted_set_kv,
-      version: "0.1.0",
+      version: @version,
       elixir: "~> 1.12",
       start_permanent: Mix.env() == :prod,
-      deps: deps()
+      deps: deps(),
+      docs: docs(),
+      package: package(),
+      source_url: "https://github.com/SoCal-Software-Labs/SortedSetKV"
+    ]
+  end
+
+  defp docs() do
+    [
+      extras: [
+        LICENSE: [title: "License"],
+        "README.md": [title: "Overview"]
+      ],
+      main: "readme",
+      assets: "assets",
+      canonical: "http://hexdocs.pm/sorted_set_kv",
+      source_url: "https://github.com/SoCal-Software-Labs/SortedSetKV",
+      source_ref: "v#{@version}",
+      formatters: ["html"]
     ]
   end
 
@@ -18,10 +36,30 @@ defmodule SortedSetKv.MixProject do
     ]
   end
 
+  defp package() do
+    [
+      description:
+        "An ultrafast double-ended queue, scored sorted set and key value database with an optional secondary u64 index.",
+      files: [
+        "lib",
+        "native/sortedsetkv/src",
+        "native/sortedsetkv/Cargo.toml",
+        "LICENSE",
+        "mix.exs"
+      ],
+      maintainers: ["Kyle Hanson"],
+      licenses: ["MIT"],
+      links: %{
+        "GitHub" => "https://github.com/SoCal-Software-Labs/SortedSetKV"
+      }
+    ]
+  end
+
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:rustler, "~> 0.23.0"}
+      {:rustler, "~> 0.23.0"},
+      {:ex_doc, ">= 0.0.0", only: :dev, runtime: false}
       # {:dep_from_hexpm, "~> 0.3.0"},
       # {:dep_from_git, git: "https://github.com/elixir-lang/my_dep.git", tag: "0.1.0"}
     ]

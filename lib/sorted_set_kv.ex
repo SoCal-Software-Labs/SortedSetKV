@@ -19,7 +19,7 @@ defmodule SortedSetKV do
 
   def zscore(_db, _collection, _key), do: :erlang.nif_error(:nif_not_loaded)
 
-  def zrembyrangebyscore(_db, _collection, _min_score, _max_score, _),
+  def zrembyrangebyscore(_db, _collection, _min_score, _max_score, _limit),
     do: :erlang.nif_error(:nif_not_loaded)
 
   def zgetbykey(_db, _collection, _key, _min_score), do: :erlang.nif_error(:nif_not_loaded)
