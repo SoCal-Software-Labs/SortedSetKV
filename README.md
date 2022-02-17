@@ -2,9 +2,9 @@
 
 A scored sorted set KV. Inspired by Redis's sorted sets, but quite different. Written for Elixir backed by Rust's sled database.
 
-This is the foundation of building a KV with a TTL, however I left it open to be used like redis `zadd` with an optional value field and score field. This means you can use it like a set, use it like a KV, use it like a scored set, use it like a scored KV, or use it as a KV TTL. It is very versitile. And very fast. Because everything is local you can get 1-4 times faster speeds than using Redis.
+This is the basis of building a KV with a TTL, however I left it abstracted to be used like redis `zadd` with an optional value field and score field. This means you can use it like a set, use it like a KV, use it like a scored set, use it like a scored KV, or use it as a KV TTL. It is very versitile. And very fast. Because everything is local you can get 1-4 times faster speeds than using Redis.
 
-Also because you control the TLL, it won't auto evict things. This is very different from Redis which will start evicting keys regardless if their TTL has past when it runs out of memory.
+Also because you control the TLL, it won't auto evict things. This is very different from Redis which will start evicting keys regardless if their TTL has passed when it runs out of memory.
 
 SortedSetKV is stored on disk and can grow beyond your RAM limit.
 
@@ -42,6 +42,9 @@ true = SortedSetKV.zexists(db, "mycollection", 0, 500)
 ```
 
 ## Conditional Add
+
+With `zadd` and `zupdate`, you can optionally only update the score if the new score is greater than the old score or if the old score is not set.
+
 ```elixir
 :ok = SortedSetKV.zadd(db, "mycollection", "hello", "world", 42, true)
 {"world", 42} = SortedSetKV.zgetbykey(db, "mycollection", "hello", 0)
@@ -49,9 +52,15 @@ true = SortedSetKV.zexists(db, "mycollection", 0, 500)
 # only adds if the score is greather than
 {"world", 42} = SortedSetKV.zgetbykey(db, "mycollection", "hello", 0)
 
+:ok = SortedSetKV.zscoreupdate(db, "mycollection", "hello", 0, true)
+{"world", 42} = SortedSetKV.zgetbykey(db, "mycollection", "hello", 0)
+
 # Setting the value to false overrides this
-:ok = SortedSetKV.zadd(db, "mycollection", "hello", "value2", 0, false)
-{"world", 0} = SortedSetKV.zgetbykey(db, "mycollection", "hello", 0)
+:ok = SortedSetKV.zadd(db, "mycollection", "hello", "value2", 10, false)
+{"value2", 10} = SortedSetKV.zgetbykey(db, "mycollection", "hello", 0)
+
+:ok = SortedSetKV.zscoreupdate(db, "mycollection", "hello", 0, false)
+{"value2", 0} = SortedSetKV.zgetbykey(db, "mycollection", "hello", 0)
 ```
 
 ## Iterating keys with scores
