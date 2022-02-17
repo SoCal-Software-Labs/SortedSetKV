@@ -26,3 +26,5 @@ sorted_set_kv-*.tar
 /tmp/
 
 /priv/
+
+/test_db/

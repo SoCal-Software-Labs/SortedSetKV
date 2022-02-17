@@ -4,8 +4,12 @@ defmodule SortedSetKV do
     crate: :sortedsetkv
 
   def open(_path), do: :erlang.nif_error(:nif_not_loaded)
+  def clear(_db), do: :erlang.nif_error(:nif_not_loaded)
 
   def zadd(_db, _collection, _key, _value, _score, _add_if_gt),
+    do: :erlang.nif_error(:nif_not_loaded)
+
+  def zexists(_db, _collection, _min_score, _max_score),
     do: :erlang.nif_error(:nif_not_loaded)
 
   def zscoreupdate(_db, _collection, _key, _score, _min_score),

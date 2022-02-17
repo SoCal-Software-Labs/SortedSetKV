@@ -1,6 +1,6 @@
 [![Hex Docs](https://img.shields.io/badge/hex-docs-blue.svg)](https://hexdocs.pm/sorted_set_kv/)
 
-# SortedSetKv
+# SortedSetKV
 
 An ultrafast double-ended queue, scored sorted set, and embedded key value database. Inspired by Redis's sorted sets, but quite different. Written for Elixir and backed by Rust's sled database.
 
@@ -18,7 +18,7 @@ This is alpha software and the API can change in the future.
 
 ## Installation
 
-`CubDB` can be installed by adding `:sorted_set_kv` to your list of dependencies in
+`SortedSetKV` can be installed by adding `:sorted_set_kv` to your list of dependencies in
 `mix.exs`:
 
 ```elixir

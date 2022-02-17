@@ -16,6 +16,17 @@ pub struct DbResource {
     pub db: sled::Db,
 }
 
+fn io_err_into(e: SledTransactionError<SledTransactionError>) -> rustler::error::Error {
+    error!("Sled Error: {}", e.to_string());
+    rustler::error::Error::Term(Box::new(atoms::sled_error()))
+}
+
+fn sled_err_into(e: sled::Error) -> rustler::error::Error {
+    error!("Sled Error: {}", e.to_string());
+    error!("Sled Error: {}", e.to_string());
+    rustler::error::Error::Term(Box::new(atoms::sled_error()))
+}
+
 #[rustler::nif]
 fn open<'a>(env: rustler::Env<'a>, a: String) -> NifResult<rustler::Term<'a>> {
     let config = sled::Config::default().path(&a);
@@ -25,14 +36,24 @@ fn open<'a>(env: rustler::Env<'a>, a: String) -> NifResult<rustler::Term<'a>> {
     Ok((atoms::ok(), db_resouce).encode(env))
 }
 
-fn io_err_into(e: SledTransactionError<SledTransactionError>) -> rustler::error::Error {
-    error!("Sled Error: {}", e.to_string());
-    rustler::error::Error::Term(Box::new(atoms::sled_error()))
-}
+#[rustler::nif]
+fn clear<'a>(db_resouce: rustler::Term<'a>) -> NifResult<rustler::Atom> {
+    let dbr: rustler::ResourceArc<DbResource> = db_resouce.decode()?;
+    let db = &dbr.db;
 
-fn sled_err_into(e: sled::Error) -> rustler::error::Error {
-    error!("Sled Error: {}", e.to_string());
-    rustler::error::Error::Term(Box::new(atoms::sled_error()))
+    db.clear().map_err(sled_err_into)?;
+
+    for name in db.tree_names() {
+        if name
+            != IVec::from(vec![
+                95, 95, 115, 108, 101, 100, 95, 95, 100, 101, 102, 97, 117, 108, 116,
+            ])
+        {
+            db.drop_tree(name).map_err(sled_err_into)?;
+        }
+    }
+
+    Ok(atoms::ok())
 }
 
 #[rustler::nif]
@@ -87,31 +108,45 @@ fn zadd<'a>(
             let kvvec = IVec::from(value_key_bytes);
             let ksvec = IVec::from(score_key_bytes);
             let mut insert = false;
+            let mut old_value: Option<IVec> = None;
 
-            if gt {
-                match key_tree.get(ksvec.clone())? {
-                    Some(value) => {
+            match key_tree.get(ksvec.clone())? {
+                Some(value) => {
+                    old_value = Some(value.clone());
+                    if gt {
                         let old_score: u64 = make_u64(&value);
                         if score.unwrap_or(u64::MAX) > old_score {
                             insert = true
                         }
+                    } else {
+                        insert = true
                     }
-                    _ => insert = true,
                 }
-            } else {
-                insert = true
+                _ => insert = true,
             }
 
             if insert {
                 if let Some(v) = value {
                     key_tree.insert(kvvec, v.as_slice())?;
+                } else {
+                    key_tree.remove(kvvec)?;
                 }
                 if let Some(s) = score {
                     let score_bin = s.to_be_bytes();
                     key_tree.insert(ksvec, &score_bin)?;
+                } else {
+                    key_tree.remove(ksvec)?;
                 }
                 if let Some(b) = score_bytes_key {
                     score_tree.insert(b, b"")?;
+                }
+                if let Some(old) = old_value {
+                    let old_score_bytes = old
+                        .to_vec()
+                        .into_iter()
+                        .chain(key.as_slice().iter().copied())
+                        .collect::<Vec<_>>();
+                    score_tree.remove(old_score_bytes)?;
                 }
             }
 
@@ -474,7 +509,7 @@ fn zexists<'a>(
     } else {
         score_tree.range(IVec::from(min_bytes)..).keys()
     };
-    Ok(iter
+    Ok(!iter
         .filter_map(|l| l.ok())
         .take(1)
         .collect::<Vec<_>>()
@@ -555,8 +590,8 @@ fn zrem<'a>(
         .into_iter()
         .chain(collection.as_slice().iter().copied())
         .collect::<Vec<_>>();
-    let key_tree: sled::Tree = db.open_tree(IVec::from(key_tree_bytes)).unwrap();
-    let score_tree: sled::Tree = db.open_tree(IVec::from(score_tree_bytes)).unwrap();
+    let key_tree: sled::Tree = db.open_tree(IVec::from(key_tree_bytes.clone())).unwrap();
+    let score_tree: sled::Tree = db.open_tree(IVec::from(score_tree_bytes.clone())).unwrap();
 
     let value_key_bytes = key
         .as_slice()
@@ -586,6 +621,13 @@ fn zrem<'a>(
     }
 
     key_tree.remove(ksvec.clone()).map_err(sled_err_into)?;
+
+    if key_tree.is_empty() {
+        db.drop_tree(key_tree_bytes).map_err(sled_err_into)?;
+    }
+    if score_tree.is_empty() {
+        db.drop_tree(score_tree_bytes).map_err(sled_err_into)?;
+    }
 
     Ok(atoms::ok())
 }
@@ -659,14 +701,14 @@ fn lpop<'a>(
         .chain(collection.as_slice().iter().copied())
         .collect::<Vec<_>>();
 
-    let list_tree: sled::Tree = db.open_tree(IVec::from(list_tree_bytes)).unwrap();
+    let list_tree: sled::Tree = db.open_tree(IVec::from(list_tree_bytes.clone())).unwrap();
 
     let maybe_left = list_tree.pop_min().map_err(sled_err_into)?;
+    if list_tree.is_empty() {
+        db.drop_tree(list_tree_bytes).map_err(sled_err_into)?;
+    }
     match maybe_left {
-        Some(elem) => {
-            list_tree.remove(&elem.0).map_err(sled_err_into)?;
-            Ok(Some(make_binary(env, &elem.1)))
-        }
+        Some(elem) => Ok(Some(make_binary(env, &elem.1))),
         _ => Ok(None),
     }
 }
@@ -685,14 +727,14 @@ fn rpop<'a>(
         .chain(collection.as_slice().iter().copied())
         .collect::<Vec<_>>();
 
-    let list_tree: sled::Tree = db.open_tree(IVec::from(list_tree_bytes)).unwrap();
+    let list_tree: sled::Tree = db.open_tree(IVec::from(list_tree_bytes.clone())).unwrap();
 
     let maybe_left = list_tree.pop_max().map_err(sled_err_into)?;
+    if list_tree.is_empty() {
+        db.drop_tree(list_tree_bytes).map_err(sled_err_into)?;
+    }
     match maybe_left {
-        Some(elem) => {
-            list_tree.remove(&elem.0).map_err(sled_err_into)?;
-            Ok(Some(make_binary(env, &elem.1)))
-        }
+        Some(elem) => Ok(Some(make_binary(env, &elem.1))),
         _ => Ok(None),
     }
 }
@@ -723,6 +765,7 @@ rustler::init!(
     "Elixir.SortedSetKV",
     [
         open,
+        clear,
         zgetbykey,
         zrangebyscore,
         zrangebyprefixscore,
@@ -731,6 +774,7 @@ rustler::init!(
         zscore,
         zscoreupdate,
         zrembyrangebyscore,
+        zexists,
         lpush,
         rpush,
         rpop,
