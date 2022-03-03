@@ -42,7 +42,7 @@ defmodule SortedSetKv.MixProject do
         "An ultrafast double-ended queue, scored sorted set and key value database with an optional secondary u64 index.",
       files: [
         "lib",
-        "native/.cargo",
+        "native/sortedsetkv/.cargo",
         "native/sortedsetkv/src",
         "native/sortedsetkv/Cargo.toml",
         "LICENSE",
