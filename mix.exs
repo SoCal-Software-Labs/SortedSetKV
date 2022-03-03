@@ -1,6 +1,6 @@
 defmodule SortedSetKv.MixProject do
   use Mix.Project
-  @version "0.1.1"
+  @version "0.1.3"
   def project do
     [
       app: :sorted_set_kv,
@@ -42,6 +42,7 @@ defmodule SortedSetKv.MixProject do
         "An ultrafast double-ended queue, scored sorted set and key value database with an optional secondary u64 index.",
       files: [
         "lib",
+        "native/.cargo",
         "native/sortedsetkv/src",
         "native/sortedsetkv/Cargo.toml",
         "LICENSE",
@@ -60,8 +61,6 @@ defmodule SortedSetKv.MixProject do
     [
       {:rustler, "~> 0.23.0"},
       {:ex_doc, ">= 0.0.0", only: :dev, runtime: false}
-      # {:dep_from_hexpm, "~> 0.3.0"},
-      # {:dep_from_git, git: "https://github.com/elixir-lang/my_dep.git", tag: "0.1.0"}
     ]
   end
 end

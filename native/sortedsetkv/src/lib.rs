@@ -22,7 +22,7 @@ fn io_err_into(e: SledTransactionError<SledTransactionError>) -> rustler::error:
 }
 
 fn sled_err_into(e: sled::Error) -> rustler::error::Error {
-    error!("Sled Error: {}", e.to_string());
+    println!("Sled Error: {}", e.to_string());
     error!("Sled Error: {}", e.to_string());
     rustler::error::Error::Term(Box::new(atoms::sled_error()))
 }
